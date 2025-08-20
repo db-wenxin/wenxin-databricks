@@ -1,0 +1,129 @@
+#!/usr/bin/env python3
+"""
+Startup script for Databricks App
+Downloads big.json from Volume before starting Streamlit app
+"""
+
+import os
+import sys
+import subprocess
+from pathlib import Path
+
+def download_file_from_volume():
+    """Download big.json from Volume using Databricks SDK"""
+    try:
+        from databricks.sdk import WorkspaceClient
+        
+        print("Initializing Databricks SDK...")
+        w = WorkspaceClient()
+        
+        # Define paths
+        volume_file_path = "/Volumes/wenxin-test/default/test-volume/big.json"
+        local_file_path = "big.json"
+        
+        print(f"Downloading {volume_file_path} to {local_file_path}...")
+        
+        # Download file using SDK
+        download_response = w.files.download(volume_file_path)
+        
+        print(f"Response type: {type(download_response)}")
+        
+        # According to Databricks SDK docs, contents_ is BinaryIO | None
+        if hasattr(download_response, 'contents') and download_response.contents is not None:
+            print("Response has contents attribute (BinaryIO)...")
+            binary_content = download_response.contents
+            print(f"Contents type: {type(binary_content)}")
+            
+            # Read from the BinaryIO object
+            if hasattr(binary_content, 'read'):
+                content = binary_content.read()
+                print(f"Successfully read {len(content)} bytes from BinaryIO")
+            else:
+                print(f"BinaryIO object doesn't have read() method")
+                return False
+        elif hasattr(download_response, 'content'):
+            print("Response has content attribute...")
+            content = download_response.content
+        elif hasattr(download_response, 'body'):
+            print("Response has body attribute...")
+            content = download_response.body
+        elif hasattr(download_response, 'read'):
+            print("Response has read() method, reading content...")
+            content = download_response.read()
+        else:
+            print(f"Unknown response type, trying to convert to bytes...")
+            try:
+                content = bytes(download_response)
+            except:
+                print(f"Failed to convert response to bytes. Response: {download_response}")
+                return False
+        
+        print(f"Content type: {type(content)}, length: {len(content) if content else 0}")
+        
+        # Write to local file
+        with open(local_file_path, 'wb') as f:
+            f.write(content)
+        
+        file_size = len(content)
+        print(f"Successfully downloaded big.json ({file_size / (1024*1024):.2f} MB)")
+        
+        return True
+        
+    except ImportError:
+        print("Databricks SDK not available, trying dbutils...")
+        try:
+            # Try using dbutils as fallback
+            dbutils.fs.cp("/Volumes/wenxin-test/default/test-volume/big.json", "file:/big.json")
+            print("Successfully downloaded big.json using dbutils")
+            return True
+        except Exception as e:
+            print(f"dbutils download failed: {str(e)}")
+            return False
+    except Exception as e:
+        print(f"SDK download failed: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+def start_streamlit():
+    """Start the Streamlit application"""
+    print("Starting Streamlit application...")
+    
+    # Get the directory of this script
+    script_dir = Path(__file__).parent
+    app_py_path = script_dir / "app.py"
+    
+    # Start streamlit
+    cmd = ["streamlit", "run", str(app_py_path)]
+    print(f"Running: {' '.join(cmd)}")
+    
+    # Use subprocess to start streamlit
+    process = subprocess.Popen(cmd)
+    
+    try:
+        process.wait()
+    except KeyboardInterrupt:
+        print("\nShutting down...")
+        process.terminate()
+        process.wait()
+
+def main():
+    """Main startup function"""
+    print("Databricks App Startup")
+    print("=" * 50)
+    
+    # Step 1: Download file from Volume
+    download_success = download_file_from_volume()
+    
+    if download_success:
+        print("File download completed successfully")
+    else:
+        print("File download failed, but continuing with app startup")
+    
+    print("-" * 50)
+    
+    # Step 2: Start Streamlit app
+    start_streamlit()
+
+if __name__ == "__main__":
+    main()
