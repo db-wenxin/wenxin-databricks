@@ -9,19 +9,39 @@ import sys
 import subprocess
 from pathlib import Path
 
+# =============================================================================
+# CONFIGURATION PARAMETERS - CUSTOMIZE THESE FOR YOUR ENVIRONMENT
+# =============================================================================
+
+# Volume configuration
+VOLUME_CATALOG = "example"           # Your Unity Catalog catalog name
+VOLUME_SCHEMA = "default"            # Your Unity Catalog schema name  
+VOLUME_NAME = "test-volume"          # Your Unity Catalog volume name
+FILE_NAME = "big.json"               # Name of the file to download
+
+# Local file configuration
+LOCAL_FILE_PATH = "big.json"         # Local path where file will be saved
+
+# =============================================================================
+# END CONFIGURATION - DO NOT MODIFY BELOW THIS LINE
+# =============================================================================
+
+def get_volume_path():
+    """Construct the full volume path from configuration parameters"""
+    return f"/Volumes/{VOLUME_CATALOG}/{VOLUME_SCHEMA}/{VOLUME_NAME}/{FILE_NAME}"
+
 def download_file_from_volume():
-    """Download big.json from Volume using Databricks SDK"""
+    """Download file from Volume using Databricks SDK"""
     try:
         from databricks.sdk import WorkspaceClient
         
         print("Initializing Databricks SDK...")
         w = WorkspaceClient()
         
-        # Define paths
-        volume_file_path = "/Volumes/wenxin-test/default/test-volume/big.json"
-        local_file_path = "big.json"
+        # Define paths using configuration
+        volume_file_path = get_volume_path()
         
-        print(f"Downloading {volume_file_path} to {local_file_path}...")
+        print(f"Downloading {volume_file_path} to {LOCAL_FILE_PATH}...")
         
         # Download file using SDK
         download_response = w.files.download(volume_file_path)
@@ -61,11 +81,11 @@ def download_file_from_volume():
         print(f"Content type: {type(content)}, length: {len(content) if content else 0}")
         
         # Write to local file
-        with open(local_file_path, 'wb') as f:
+        with open(LOCAL_FILE_PATH, 'wb') as f:
             f.write(content)
         
         file_size = len(content)
-        print(f"Successfully downloaded big.json ({file_size / (1024*1024):.2f} MB)")
+        print(f"Successfully downloaded {FILE_NAME} ({file_size / (1024*1024):.2f} MB)")
         
         return True
         
@@ -73,8 +93,9 @@ def download_file_from_volume():
         print("Databricks SDK not available, trying dbutils...")
         try:
             # Try using dbutils as fallback
-            dbutils.fs.cp("/Volumes/wenxin-test/default/test-volume/big.json", "file:/big.json")
-            print("Successfully downloaded big.json using dbutils")
+            volume_path = get_volume_path()
+            dbutils.fs.cp(volume_path, f"file:/{LOCAL_FILE_PATH}")
+            print(f"Successfully downloaded {FILE_NAME} using dbutils")
             return True
         except Exception as e:
             print(f"dbutils download failed: {str(e)}")
@@ -110,6 +131,11 @@ def start_streamlit():
 def main():
     """Main startup function"""
     print("Databricks App Startup")
+    print("=" * 50)
+    print(f"Configuration:")
+    print(f"  Volume: /Volumes/{VOLUME_CATALOG}/{VOLUME_SCHEMA}/{VOLUME_NAME}")
+    print(f"  File: {FILE_NAME}")
+    print(f"  Local path: {LOCAL_FILE_PATH}")
     print("=" * 50)
     
     # Step 1: Download file from Volume
