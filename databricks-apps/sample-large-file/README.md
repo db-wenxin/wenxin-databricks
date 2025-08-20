@@ -14,8 +14,8 @@ Failed to snapshot source code due to error: File /Workspace/Users/xxxxxx/big.js
 
 ## Solutions
 
-### Solution 1: Use Git-backed App
-*As of today Aug 20, 2025, this feature has not been released yet*
+### Solution 1: use the App with other VCS
+*As of today Aug, 2025, this feature has not been released yet*
 
 ### Solution 2: Use Databricks Volume or AWS S3 to store the large file and load the file into the app container after the app is running
 If the file is required for the app to start, you may need to first download it in `app.yaml` before starting the app.
