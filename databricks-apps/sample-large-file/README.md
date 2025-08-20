@@ -4,7 +4,7 @@
 
 ## Problem Statement
 
-**Q: My customer wants to run an App that needs to use/load a file that is larger than 10 MB**
+**I want to run an App that needs to use/load a file that is larger than 10 MB**
 
 We are able to use CLI/SDK to create/sync a single file to workspace, however the App deployment failed because it could not process this large file.
 
